@@ -1,0 +1,323 @@
+     BetCashBP = "golden backpack"
+     MoneyBP = "backpack of holding"
+Bet =
+{
+    Value = 0, -- nie konfigurowalne
+    min = 10, -- w cc 10 = 10cc
+    max = 200, -- w cc  200 = 2kk
+}
+
+	-- Helmet Setting
+local PartyHatID = 6578 -- Item ID of the PartyHat
+
+payo = 0.6 --    1 == 100%  ,  0.6 == 60%  
+ yellActive = true 
+yellMessage = (" ••   ==>[Min 100k][Max 2000k]<==   ••    ••   Come Bet and Test Your Luck  ••      •• The Best Casino #Aurera-Global ••") 
+
+info =  'Min: ' .. Bet.min*10 .. "k. Max: " .. Bet.max*10 .. "k. \n Say  \'50h\' to bet 50k on high or \'50l\' to bet 50k on low, Say \'BALANCE\' to see their money and Say \'PAY\' to withdraw money." 
+cashposx = Self.Position().x  
+cashposy = Self.Position().y 
+cashposz = Self.Position().z 
+Players = {} 
+Rolls = {} 
+cc = 3043 
+Balance = 0 
+Gambler_Name = "" 
+ money = Self.ItemCount(cc) 
+ cash = Self.ItemCount(cc) 
+ Players = {} 
+Rolls = {} 
+AntiSpamTimer = os.clock() 
+function AntiSpam(message, type) 
+if os.difftime(os.clock(), AntiSpamTimer) >= 1.3 then 
+Self.Speak(message, type) 
+AntiSpamTimer = os.clock() 
+end 
+end 
+
+
+function onSpeak(channel, msg) 
+  if msg == 'balance' then 
+    channel:SendOrangeMessage('DiceBot', Gambler_Name .. '\'s balance is ' .. Balance) 
+  end 
+  if msg == 'info' then 
+    channel:SendOrangeMessage('DiceBot', "Bet.min = " .. Bet.min) 
+    channel:SendOrangeMessage('DiceBot', "Bet.max = " .. Bet.max) 
+    channel:SendOrangeMessage('DiceBot', "Gambler_Name = " .. Gambler_Name) 
+    channel:SendOrangeMessage('DiceBot', "Balance = " .. Balance) 
+  end 
+end 
+function onClose(channel, msg) 
+  print("Leaving channel") 
+end 
+channel = Channel.New('DiceBot log', onSpeak, onClose) 
+Module.New('Casino_Turn', function(Mod) 
+  Casino_Loaded = true 
+    if (Casino_Loaded) then 
+        Player_Detected = false
+  
+        for name, creature in Creature.iPlayers(2) do 
+  
+            if (creature:Position().x == Self.Position().x + 2 and creature:Position().y == Self.Position().y and creature:Position().z == Self.Position().z) then 
+                Player_Detected = true 
+                    if Gambler_Name ~= creature:Name() and not table.contains(Players, Gambler_Name) then 
+                    table.insert(Players, Gambler_Name) 
+                    for i = 1, #Players do 
+                    print(Players[i]) 
+               end 
+               end 
+  
+                Gambler_Name = creature:Name() 
+                if (creature:Position().x < Self.Position().x) then 
+                  cashposx = Self.Position().x - 1 
+                  cashposy = Self.Position().y - 1 
+                  cashposz = Self.Position().z 
+                    if (Self.LookDirection() ~= WEST) then 
+                        Self.Turn(WEST) 
+                    end 
+                elseif (creature:Position().x > Self.Position().x) then 
+                                    cashposx = Self.Position().x + 1 
+                                     cashposy = Self.Position().y  - 1 
+                                     cashposz = Self.Position().z 
+                                        if (Self.LookDirection() ~= EAST) then 
+
+
+                        Self.Turn(EAST) 
+                        welcomemsg = ("Welcome " .. Gambler_Name .. "\nMIN " .. Bet.min * 10 .. "K. MAX " .. Bet.max *10 .. " k.\n Say \'info\'!! ") 
+                                         AntiSpam(welcomemsg, SPEAK_SAY) 
+
+                    end 
+
+
+                else 
+                    if (creature:Position().y < Self.Position().y) then 
+                        if (Self.LookDirection() ~= NORTH) then 
+                            Self.Turn(NORTH) 
+                        end 
+                    elseif (creature:Position().y > Self.Position().y) then 
+                        if (Self.LookDirection() ~= SOUTH) then 
+                            Self.Turn(SOUTH) 
+                        end 
+                    else 
+                        print('Casino: Error. Self character is the potential gambler.') 
+                    end 
+                end 
+                break 
+            end 
+        end 
+        if not (Player_Detected) then 
+                          Balance = 0 
+            if (Self.LookDirection() ~= SOUTH) then 
+              yellDelay = os.time() 
+                Self.Turn(SOUTH) 
+                Balance = 0 
+                   AntiSpam("Visitantes Hoje: " .. #Players, SPEAK_SAY) 
+            end 
+        end 
+    end 
+    Mod:Delay(700) 
+ 
+Module.New('Use Party Hat', function(module) 
+    if (Self.Head().id == PartyHatID) then
+            Self.UseItemFromEquipment("head")
+            wait(400,600)
+    end
+    module:Delay(1200.1400)
+end)
+end) 
+
+ EffectMessageProxy.OnReceive("DiceSignal", function(proxy, message, x, y, z) 
+roll = string.match(message, Self.Name().." rolled a (.+).") 
+if roll then 
+dice = Signal.New('Dice') 
+dice:Send(roll) 
+end 
+end) 
+Module.New('Check-Bet', function(mod) 
+
+      BetBP = Container.New(BetCashBP) 
+      CashBP = Container.New(MoneyBP) 
+            if (Map.GetTopMoveItem(cashposx, cashposy, cashposz).id == cc and not withdraw and not Casher) then 
+              Casher = true 
+             d =  (Map.GetTopMoveItem(cashposx, cashposy, cashposz)).count 
+            Map.PickupItem(cashposx, cashposy, cashposz, BetBP:Index(), 0) 
+            wait(700 + Self.Ping()) 
+                             print(BetBP:CountItemsOfID(cc)) 
+                  Bet.Value = BetBP:CountItemsOfID(cc) 
+                  Balance   = Balance + Bet.Value 
+                  repeat 
+                  BetBP:MoveItemToContainer(0, CashBP:Index(), 0) 
+                  until 
+                    BetBP:CountItemsOfID(cc) == 0 
+           --  AntiSpam("Bot added " .. Bet.Value * 10 .. " k to your balance. Your balance is " .. Balance * 10 .. "k.", SPEAK_SAY) 
+             channel:SendOrangeMessage('DiceLog', 'Bot added ' .. Bet.Value *10 .. 'k on ' .. Gambler_Name .. '\'s balance and its ' .. Balance *10 .. 'k.') 
+             print('Bet Value is ' .. Bet.Value * 10 .. " " .. Gambler_Name .. " balance is " .. Balance * 10) 
+             wait(300 + Self.Ping()) 
+             Casher = false 
+             Bet.Value = 0 
+              
+end 
+end) 
+ LocalSpeechProxy.OnReceive('bet', function(proxy, mtype, speaker, level, text) 
+  Cyfra = text:match('%d+') 
+  Litera = text:match('%a+') 
+  if speaker == Gambler_Name and Cyfra ~= nil and Litera ~= "" then 
+    Cyfra1 = tonumber(Cyfra) + 0 
+    if table.isStrIn({'l', 'h'}, Litera) and Cyfra ~= nil then 
+      print(Cyfra1 .. " " .. Litera) 
+      if Cyfra1 >= Bet.min * 10 and Cyfra1 <= Bet.max * 10 and Balance >= Cyfra1 / 10 and Litera == "h" or Litera == "l" and speaker == Gambler_Name then 
+                ValidBet = true 
+                playerBet = Cyfra1 
+                playerType = Litera 
+                print('valid ' .. playerBet .. 'valid ' .. playerType) 
+                else  
+                  ValidBet = false 
+              end 
+            else 
+              ValidBet = false 
+            end 
+          end 
+          if Cyfra == nil or Cyfra == 0 and Litera == "" then 
+               ValidBet = false 
+  end 
+  end) 
+ LocalSpeechProxy.OnReceive('Balance', function(proxy, mtype, speaker, level, text) 
+  if speaker == Gambler_Name and text:lower() == 'balance' then 
+    AntiSpam('Your balance: ' .. Balance *10 .. " k.", SPEAK_SAY) 
+  end 
+end)
+LocalSpeechProxy.OnReceive('BalanceRolls', function(proxy, mtype, speaker, level, text) 
+  if speaker == Gambler_Name and ValidBet and not Casher then 
+    print(playerBet .. " playerBet " .. "playerType " .. playerType) 
+                             
+                                      if playerType:lower() == 'h' and playerBet / 10  >= Bet.min and playerBet / 10 <= Bet.max and Balance ~= 0 and playerBet /10 <= Balance and ValidBet == true and not Bett and not withdrawthen then 
+                                        Bett = true 
+                                           Self.UseItemFromGround(Self.Position().x, Self.Position().y -1, Self.Position().z) 
+                         Signal.OnReceive('Dice', function(signal, data) 
+                              if (data == "4" or data == "5" or data == "6") and playerType:lower() == 'h' and playerBet / 10 >= Bet.min and not withdraw then 
+                                Self.UseItemFromEquipment('head') 
+                                Self.UseItemFromEquipment('head') 
+                                   Balance = math.floor(Balance + ((playerBet / 10) * payo)) 
+                                   AntiSpam("YourType: " .. playerType:upper() .. ". Você Ganhou!: " .. math.floor(playerBet * payo)  .. ".\nBalance: " ..  Balance * 10 .. " k." , SPEAK_SAY) 
+                         channel:SendYellowMessage('DiceLog', Gambler_Name .. ": " .. playerType .. ' . Bet: ' .. playerBet .. ' Você Ganhou!:' .. playerBet  .. ' Balance = ' .. Balance * 10) 
+                    
+                         print('Você Ganhou!') 
+                         Bett = false 
+                    else 
+                      Bett = true 
+                         Balance = math.floor(Balance - playerBet / 10) 
+                         AntiSpam( "YourType: " .. playerType:upper() .. ". Você Perdeu!: " .. playerBet .. ".\nBalance: " .. Balance *10 .. ' k.', SPEAK,SAY) 
+                                                  channel:SendOrangeMessage('DiceLog', Gambler_Name .. ": " .. playerType .. ' . Bet: ' .. playerBet .. ' Você Perdeu!:' .. playerBet  .. ' Balance = ' .. Balance * 10) 
+                         print("Você Perdeu!") 
+                         Bett = false 
+                       end 
+                    end) 
+                          elseif playerType:lower() == 'l' and playerBet / 10 >= Bet.min and  playerBet / 10 <= Bet.max  and playerBet /10 <= Balance and Balance ~= 0 and ValidBet == true and not Bett and not withdraw then 
+                        -- browse:UseItem(0) 
+                        Bett = true 
+                         Self.UseItemFromGround(Self.Position().x, Self.Position().y -1, Self.Position().z) 
+                         Signal.OnReceive('Dice', function(signal, data)  
+                              if (data == "1" or data == "2" or data == "3") and playerType:lower() == 'l' and playerBet /10 >= Bet.min and not withdraw then 
+                                Self.UseItemFromEquipment('head') 
+                                Self.UseItemFromEquipment('head') 
+                                   Balance = math.floor(Balance + ((playerBet / 10)*payo)) 
+                                   AntiSpam( "YourType: " .. playerType:upper() .. ". Você Ganhou!: " .. math.floor(playerBet * payo) .. ".\nBalance: " ..  Balance * 10 .. " k." , SPEAK_SAY) 
+                                  channel:SendYellowMessage('DiceLog', Gambler_Name .. ": " .. playerType .. ' . Bet: ' .. playerBet / 1.2 .. ' Você Ganhou!:' .. playerBet * 0.8 .. ' Balance = ' .. Balance * 10) 
+Bett = false 
+                         print('Você Ganhou!') 
+                               else 
+                                Bett = true 
+                          Balance =math.floor(Balance - playerBet / 10) 
+                          AntiSpam( "YourType: " .. playerType:upper() .. ". Você Perdeu!: " .. playerBet .. ".\nBalance: " .. Balance *10 .. ' k.' , SPEAK_SAY) 
+                                                channel:SendOrangeMessage('DiceLog', Gambler_Name .. ": " .. playerType .. ' . Bet: ' .. playerBet .. ' Você Perdeu!:' .. playerBet  .. ' Balance = ' .. Balance * 10) 
+                         print("Você Perdeu!") 
+                         Bett = false 
+                       end 
+                    end)      
+                end 
+            elseif speaker == Gambler_Name and not ValidBet then 
+              if text:lower() == 'h' and Balance >= Bet.min and Balance <= Bet.max and not Bett and not withdraw then 
+                Bett = true 
+                                                           Self.UseItemFromGround(Self.Position().x, Self.Position().y -1, Self.Position().z) 
+                         Signal.OnReceive('Dice', function(signal, data) 
+                              if (data == "4" or data == "5" or data == "6") and text:lower() == 'h'   then 
+                                 Self.UseItemFromEquipment('head') 
+                                 Self.UseItemFromEquipment('head') 
+                                   Balance = math.floor(Balance + (Balance * payo))  
+                                   AntiSpam("YourType: " .. text:upper() .. ". Você Ganhou!: " .. Balance * 10 .. ".\nBalance: " ..  Balance * 10 .. " k." , SPEAK_SAY) 
+                         channel:SendYellowMessage('DiceLog', Gambler_Name .. ": " .. text:upper() .. ' . Bet: ' .. Balance * 10 .. ' Você Ganhou!:' .. Balance * 10 .. ' Balance = ' .. Balance * 10) 
+                   Bett = false 
+                         print('Você Ganhou!') 
+                    else 
+                         Bett = true 
+                         cash = money + Balance 
+                         AntiSpam( "YourType: " .. text:upper() .. ". Você Perdeu!: " .. Balance * 10 .. " k.\nBalance: 0 k.", SPEAK,SAY) 
+                         Balance = 0 
+                                                  channel:SendOrangeMessage('DiceLog', Gambler_Name .. ": " .. text:upper() .. ' . Bet: ' .. Balance * 10 .. ' Você Perdeu!:' .. Balance * 10  .. ' Balance = 0' ) 
+                         print("Você Perdeu!") 
+                         Bett = false 
+                       end 
+                       end) 
+ elseif   text:lower() == 'l' and Balance >= Bet.min and Balance <= Bet.max and not Bett and not withdraw then 
+              Bett = true 
+                                                           Self.UseItemFromGround(Self.Position().x, Self.Position().y -1, Self.Position().z) 
+                         Signal.OnReceive('Dice', function(signal, data) 
+                              if (data == "1" or data == "2" or data == "3") and text:lower() == 'l'   then 
+                               Self.UseItemFromEquipment('head') 
+                               Self.UseItemFromEquipment('head') 
+                                   Balance = math.floor(Balance + (Balance * payo)) 
+                                   AntiSpam("YourType: " .. text:upper() .. ". Você Ganhou!: " .. Balance * 10 .. ".\nBalance: " ..  Balance * 10 .. " k." , SPEAK_SAY) 
+                         channel:SendYellowMessage('DiceLog', Gambler_Name .. ": " .. text:upper() .. ' . Bet: ' .. Balance .. ' Você Ganhou!:' .. Balance * 10 .. ' Balance = ' .. Balance * 10) 
+                   Bett = false 
+                         print('Você Ganhou!') 
+                    else 
+                         Bett = true 
+                         AntiSpam( "YourType: " .. text:upper() .. ". Você Perdeu!: " .. Balance * 10 .. " k.\nBalance: 0 k.", SPEAK,SAY) 
+                         Balance = 0 
+                                                  channel:SendOrangeMessage('DiceLog', Gambler_Name .. ": " .. text:upper() .. ' . Bet: ' .. Balance * 10 .. ' Você Perdeu!:' .. Balance * 10  .. ' Balance = 0' ) 
+                         print("Você Perdeu!") 
+                         Bett = false 
+                       end 
+                       end) 
+end 
+end 
+
+end) 
+  
+LocalSpeechProxy.OnReceive('withdraw', function(proxy, mtype, speaker ,level ,text) 
+  if not Casher and not withdraw then 
+if (speaker:lower() == Gambler_Name:lower() and Balance ~= 0 ) and not withdraw and not Bett and not Casher then 
+
+     if (text:lower() == 'pay' or text:lower() == '>' or text:lower() == 'payout' or text:lower() == 'payo' or text:lower() == 'withdraw' or text:lower() == '<' and not withdraw ) then 
+     withdraw = true 
+     Self.DropItem(cashposx, cashposy, cashposz, cc, Balance) 
+     channel:SendOrangeMessage('DiceLog', 'Moved ' .. Balance .. " Crystal Coins onto " .. Gambler_Name .. '\'s locker.') 
+          Balance = 0 
+     AntiSpam( 'Your balance is ' .. Balance .. ", You should charge your account", SPEAK_SAY) 
+     wait(5000) 
+     withdraw = false 
+     end 
+   end 
+     end 
+     end ) 
+ LocalSpeechProxy.OnReceive('info', function(proxy, mtype, speaker, level, text) 
+  if (speaker == Gambler_Name and text:lower() == 'info') then 
+AntiSpam(info , SPEAK_SAY) 
+end 
+end) 
+Module.New('Yelling', function(mod) 
+  if yellActive then 
+    if not Player_Detected then 
+     -- Timer2 = yellDelay 
+        local Spam2 = os.difftime(os.time(), Timer2) 
+        if Spam2 >= 120 then 
+        Self.Yell(yellMessage) 
+        Timer2 = os.time() 
+    end 
+    end 
+  end 
+    mod:Delay(1400) 
+    end)  
+
+
+
